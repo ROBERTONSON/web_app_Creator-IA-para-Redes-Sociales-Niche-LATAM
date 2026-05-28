@@ -1,4 +1,4 @@
-import { groq } from './client'
+import { getGroqClient } from './client'
 import type { GeneracionContenido } from '@/types'
 
 interface GroqResponseSchema {
@@ -42,7 +42,7 @@ export async function generateContent(prompt: string): Promise<GeneracionConteni
   const timeoutId = setTimeout(() => controller.abort(), 30_000)
 
   try {
-    const completion = await groq.chat.completions.create(
+    const completion = await getGroqClient().chat.completions.create(
       {
         model: 'llama-3.1-8b-instant',
         messages: [{ role: 'user', content: prompt }],
