@@ -1,0 +1,249 @@
+# Plan de Implementación: Creator IA LATAM
+
+## Resumen
+
+Implementación incremental de un SaaS web con Next.js 14 App Router, Supabase, Groq API y Vercel. Cada fase construye sobre la anterior, terminando con todos los componentes integrados y desplegados.
+
+## Tareas
+
+- [x] 1. Setup del proyecto
+  - Inicializar proyecto Next.js 14 con TypeScript y App Router: `npx create-next-app@latest creator-ia-latam --typescript --tailwind --app --src-dir`
+  - Instalar dependencias: `@supabase/ssr @supabase/supabase-js groq react-hook-form @hookform/resolvers zod fast-check vitest @vitejs/plugin-react @testing-library/react @testing-library/jest-dom jsdom`
+  - Instalar shadcn/ui y configurar con tema dark: `npx shadcn@latest init`
+  - Agregar componentes shadcn necesarios: button, card, input, label, select, textarea, toast, badge, separator
+  - Crear `vitest.config.ts` con environment jsdom y globals true
+  - Crear `.env.local` con las 3 variables de entorno requeridas (valores placeholder): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `GROQ_API_KEY`
+  - Crear `src/types/index.ts` con todas las interfaces TypeScript del diseño: `Nicho`, `NICHOS_CONFIG`, `FormularioGenerador`, `GeneracionContenido`, `Generacion`, `GenerateRequest`, `GenerateResponse`
+  - _Requisitos: 7.1_
+
+- [x] 2. Base de datos y clientes Supabase
+  - [x] 2.1 Crear schema SQL en Supabase
+    - Ejecutar el SQL del diseño: extensión pgcrypto, enum `nicho_type`, tabla `generations`, índice `idx_generations_user_created`
+    - Habilitar RLS y crear las 3 políticas: select, insert y delete usando `auth.uid() = user_id`
+    - _Requisitos: 5.1, 7.2_
+  - [x] 2.2 Implementar clientes Supabase
+    - Crear `src/lib/supabase/client.ts` — cliente browser con `createBrowserClient`
+    - Crear `src/lib/supabase/server.ts` — cliente server con `createServerClient` y cookies de Next.js
+    - Crear `src/lib/supabase/middleware.ts` — cliente para middleware con `createServerClient` y `updateSession`
+    - _Requisitos: 1.1, 7.2_
+  - [x] 2.3 Implementar middleware de autenticación
+    - Crear `src/middleware.ts` que intercepte rutas `/(dashboard)/**` y `/(auth)/**`
+    - Usar el cliente de middleware para validar sesión; redirigir a `/login` si no hay sesión activa
+    - Redirigir a `/dashboard` si usuario autenticado intenta acceder a rutas de auth
+    - _Requisitos: 1.4_
+  - [ ]* 2.4 Escribir property test — Propiedad 3: Rutas del dashboard requieren autenticación
+    - **Propiedad 3: Rutas del dashboard requieren autenticación**
+    - Usar fast-check para generar rutas arbitrarias dentro de `/(dashboard)` y verificar que sin sesión siempre redirigen a login
+    - **Valida: Requisito 1.4**
+
+- [x] 3. Autenticación — Server Actions y páginas
+  - [x] 3.1 Implementar Server Actions de auth
+    - Crear `src/actions/auth.ts` con funciones `login`, `register` y `logout`
+    - `login`: llama a `supabase.auth.signInWithPassword`, devuelve `{error}` si falla
+    - `register`: llama a `supabase.auth.signUp`, devuelve `{error}` si falla
+    - `logout`: llama a `supabase.auth.signOut` y redirige a `/login`
+    - Manejar el caso de Supabase no disponible con mensaje genérico (Requisito 1.6)
+    - _Requisitos: 1.1, 1.2, 1.3, 1.5, 1.6_
+  - [x] 3.2 Crear páginas y formularios de auth
+    - Crear `src/app/(auth)/login/page.tsx` con `LoginForm` client component
+    - Crear `src/app/(auth)/register/page.tsx` con `RegisterForm` client component
+    - Crear `src/components/auth/LoginForm.tsx`: campos email/password, manejo de errores, loading state, llama a Server Action `login`
+    - Crear `src/components/auth/RegisterForm.tsx`: campos email/password/confirmación, llama a Server Action `register`
+    - _Requisitos: 1.1, 1.2, 1.3, 1.6_
+  - [ ]* 3.3 Escribir unit tests para auth
+    - Testear `LoginForm`: renderizado, validación de campos vacíos, mensaje de error con credenciales inválidas
+    - Testear `RegisterForm`: renderizado, validación, flujo exitoso
+    - Mockear Server Actions con `vi.mock`
+    - _Requisitos: 1.1, 1.2, 1.3_
+  - [ ]* 3.4 Escribir property tests — Propiedades 1, 2 y 4
+    - **Propiedad 1: Credenciales válidas producen sesión autenticada** — Valida: Requisito 1.2
+    - **Propiedad 2: Credenciales inválidas son rechazadas sin revelar información sensible** — Valida: Requisito 1.3
+    - **Propiedad 4: Logout invalida la sesión activa** — Valida: Requisito 1.5
+    - Usar fast-check para generar pares email/password arbitrarios y verificar comportamiento del sistema
+
+- [x] 4. Layout del Dashboard — Sidebar, dark mode y responsive
+  - [x] 4.1 Crear root layout y configuración de tema
+    - Crear `src/app/layout.tsx` con `ThemeProvider` para dark mode (strategy: `class`)
+    - Configurar `tailwind.config.ts` con `darkMode: 'class'` y colores del tema
+    - Crear `src/app/page.tsx` que redirija a `/dashboard` si hay sesión o a `/login` si no
+    - _Requisitos: 6.2_
+  - [x] 4.2 Implementar Sidebar y layout del dashboard
+    - Crear `src/components/dashboard/Sidebar.tsx`: navegación lateral con links a Dashboard, Historial; botón de logout; responsive (colapsable en móvil)
+    - Crear `src/app/(dashboard)/layout.tsx`: incluye Sidebar, verifica sesión con RSC, aplica grid layout
+    - Aplicar animaciones suaves (max 300ms) en hover y transiciones de navegación
+    - _Requisitos: 6.1, 6.3, 6.4_
+  - [ ]* 4.3 Escribir unit tests para Sidebar
+    - Testear renderizado de links de navegación
+    - Testear comportamiento responsive (visibilidad en mobile vs desktop)
+    - _Requisitos: 6.1, 6.3_
+
+- [x] 5. Checkpoint — Verificar setup base
+  - Asegurarse de que el proyecto compila sin errores TypeScript
+  - Verificar que el middleware redirige correctamente rutas protegidas
+  - Asegurarse de que todos los tests existentes pasan; consultar al usuario si hay dudas.
+
+- [x] 6. Selección de Nicho y Formulario Generador
+  - [x] 6.1 Implementar NichoSelector
+    - Crear `src/components/dashboard/NichoSelector.tsx`: grid de 6 cards con emoji, label y estado seleccionado
+    - Usar `NICHOS_CONFIG` del types para renderizar los 6 nichos
+    - Al cambiar nicho, emitir evento al padre para limpiar formulario (Propiedad 5)
+    - _Requisitos: 2.1, 2.2, 2.3, 2.4_
+  - [x] 6.2 Implementar schema de validación Zod
+    - Crear `src/lib/validations/generator.ts` con `generatorSchema` usando Zod
+    - Validar que los 6 campos sean strings no vacíos (trim)
+    - Exportar tipo `GeneratorFormValues` inferido del schema
+    - _Requisitos: 3.1, 3.2, 7.3_
+  - [x] 6.3 Implementar GeneratorForm
+    - Crear `src/components/dashboard/GeneratorForm.tsx` con react-hook-form + zodResolver
+    - Campos: nombreNegocio (input), pais (input), ciudad (input), promocion (textarea), tono (select con opciones predefinidas + texto libre), objetivo (select con opciones predefinidas)
+    - Mostrar errores de validación por campo al intentar enviar con campos vacíos
+    - Botón "Generar" deshabilitado hasta que todos los campos sean válidos
+    - _Requisitos: 3.1, 3.2, 3.3, 3.4, 3.5_
+  - [x] 6.4 Crear página principal del dashboard
+    - Crear `src/app/(dashboard)/dashboard/page.tsx` con `NichoSelector` + `GeneratorForm` integrados
+    - Manejar estado de nicho seleccionado; al cambiar nicho, resetear formulario con `form.reset()`
+    - _Requisitos: 2.2, 2.4_
+  - [ ]* 6.5 Escribir unit tests para NichoSelector y GeneratorForm
+    - `NichoSelector.test.tsx`: verificar que renderiza exactamente 6 nichos, que seleccionar uno lo marca como activo
+    - `GeneratorForm.test.tsx`: verificar campos requeridos, opciones de tono y objetivo, estado del botón
+    - _Requisitos: 2.1, 3.1, 3.3, 3.4, 3.5_
+  - [ ]* 6.6 Escribir property tests — Propiedades 5, 6 y 7
+    - **Propiedad 5: Cambio de nicho limpia el formulario** — Valida: Requisito 2.4
+    - **Propiedad 6: Formulario con campos vacíos es rechazado** — Usar `generatorSchema.safeParse` con fast-check filtrando inputs con al menos un campo vacío — Valida: Requisito 3.2
+    - **Propiedad 7: Formulario completo habilita el botón de generación** — Generar combinaciones válidas de 6 campos y verificar que `generatorSchema.safeParse` retorna `success: true` — Valida: Requisito 3.5
+
+- [x] 7. Prompt Templates por nicho
+  - [x] 7.1 Implementar los 6 templates de prompt
+    - Crear `src/lib/prompts/templates/odontologo.ts` — experto en salud dental LATAM
+    - Crear `src/lib/prompts/templates/peluqueria.ts` — experto en belleza y estética LATAM
+    - Crear `src/lib/prompts/templates/inmobiliaria.ts` — experto en bienes raíces LATAM
+    - Crear `src/lib/prompts/templates/gimnasio.ts` — experto en fitness y bienestar LATAM
+    - Crear `src/lib/prompts/templates/mecanico.ts` — experto en servicios automotrices LATAM
+    - Crear `src/lib/prompts/templates/restaurante.ts` — experto en gastronomía LATAM
+    - Cada template recibe `FormularioGenerador` e instruye a Gemini a responder con JSON de 6 campos exactos
+    - Incluir instrucciones de localización: español latinoamericano, referencias a `pais` y `ciudad`
+    - _Requisitos: 4.1, 4.3, 4.6_
+  - [x] 7.2 Implementar `buildPrompt`
+    - Crear `src/lib/prompts/index.ts` con función `buildPrompt(nicho: Nicho, form: FormularioGenerador): string`
+    - Mapear cada nicho a su template correspondiente
+    - _Requisitos: 4.1, 4.3_
+  - [ ]* 7.3 Escribir property tests — Propiedades 8 y 9
+    - **Propiedad 8: El prompt construido contiene los datos del formulario y localización** — Para cualquier nicho y formulario válido, verificar que el prompt contiene `form.pais`, `form.ciudad` e instrucciones en español — Valida: Requisitos 4.1, 4.3, 4.6
+    - **Propiedad 9: Toda generación exitosa contiene exactamente 6 elementos de contenido** — Mockear Gemini y verificar que el parser siempre extrae los 6 campos no vacíos — Valida: Requisito 4.2
+
+- [x] 8. Generación con Groq API — Route Handler y persistencia
+  - [x] 8.1 Implementar cliente Groq
+    - Crear `src/lib/groq/client.ts`: inicializar cliente `Groq` con `GROQ_API_KEY`, exportar instancia
+    - Verificar que `GROQ_API_KEY` existe al inicializar; lanzar error descriptivo si no
+    - _Requisitos: 7.1_
+  - [x] 8.2 Implementar wrapper `generateContent`
+    - Crear `src/lib/groq/generate.ts` con función `generateContent(prompt: string): Promise<GeneracionContenido>`
+    - Usar `AbortController` con timeout de 30 segundos
+    - Llamar a `groq.chat.completions.create` con modelo `llama-3.1-8b-instant` y `response_format: { type: 'json_object' }`
+    - Parsear la respuesta JSON y mapear a `GeneracionContenido`
+    - Lanzar error tipado si el timeout se agota o si la respuesta no tiene los 6 campos
+    - _Requisitos: 4.2, 4.5_
+  - [x] 8.3 Implementar Route Handler `/api/generate`
+    - Crear `src/app/api/generate/route.ts` con método POST
+    - Validar sesión con cliente Supabase server; retornar 401 si no hay sesión
+    - Parsear y validar body con `generatorSchema` de Zod; retornar 400 si inválido
+    - Sanitizar inputs (trim, strip HTML) antes de pasar a `buildPrompt`
+    - Llamar a `buildPrompt` y luego a `generateContent`
+    - Persistir resultado en tabla `generations` con `supabase.from('generations').insert(...)`
+    - Retornar `GenerateResponse` con la generación completa; manejar errores con códigos HTTP apropiados (400, 401, 408, 500)
+    - _Requisitos: 4.1, 4.2, 4.4, 4.5, 5.1, 7.1, 7.3_
+  - [ ]* 8.4 Escribir unit tests para el Route Handler
+    - Testear caso de timeout (408), validación fallida (400), sin sesión (401), éxito (200)
+    - Mockear `generateContent` y cliente Supabase
+    - _Requisitos: 4.5, 7.3_  - [ ]* 8.5 Escribir property test — Propiedad 15
+    - **Propiedad 15: Los inputs del servidor son validados antes de construir el prompt**
+    - Usar fast-check para generar strings con caracteres especiales, HTML y scripts; verificar que el schema Zod los rechaza o sanitiza antes de llegar a `buildPrompt`
+    - **Valida: Requisito 7.3**
+
+- [x] 9. Visualización de resultados de generación
+  - [x] 9.1 Implementar componentes de resultado
+    - Crear `src/components/generation/ContentCard.tsx`: card individual con título, contenido, botón "Copiar" que usa `navigator.clipboard.writeText`; mostrar feedback visual al copiar
+    - Crear `src/components/generation/LoadingState.tsx`: skeleton/spinner visible durante la llamada a `/api/generate`
+    - Crear `src/components/generation/GenerationResult.tsx`: renderiza los 6 `ContentCard` en secciones diferenciadas (post, caption, hashtags, historia, CTA, reel)
+    - _Requisitos: 4.4, 4.7_
+  - [x] 9.2 Integrar generación en la página del dashboard
+    - Actualizar `src/app/(dashboard)/dashboard/page.tsx` para manejar el submit del formulario
+    - Al enviar, mostrar `LoadingState`; al recibir respuesta, mostrar `GenerationResult`
+    - Manejar errores del Route Handler mostrando mensaje contextual sin interrumpir navegación
+    - _Requisitos: 4.4, 4.5, 6.5, 6.6_
+  - [x] 9.3 Crear página de generación dedicada (opcional)
+    - Crear `src/app/(dashboard)/generate/page.tsx` para mostrar resultados de generación en URL propia
+    - _Requisitos: 4.7_
+  - [ ]* 9.4 Escribir unit tests para GenerationResult y ContentCard
+    - `GenerationResult.test.tsx`: verificar que renderiza exactamente 6 secciones con datos del mock
+    - `ContentCard.test.tsx`: verificar botón de copia y feedback visual
+    - _Requisitos: 4.7_
+  - [ ]* 9.5 Escribir property test — Propiedad 10
+    - **Propiedad 10: Los resultados de generación se renderizan con los 6 elementos**
+    - Usar fast-check para generar objetos `GeneracionContenido` arbitrarios válidos y verificar que `GenerationResult` siempre renderiza los 6 elementos con mecanismo de copia
+    - **Valida: Requisito 4.7**
+
+- [x] 10. Checkpoint — Verificar flujo de generación completo
+  - Asegurarse de que el flujo completo (formulario → API → Groq → persistencia → resultado) funciona end-to-end con tests
+  - Verificar que todos los tests de propiedades 5-10 y 15 pasan; consultar al usuario si hay dudas.
+
+- [x] 11. Historial de generaciones
+  - [x] 11.1 Implementar Server Actions de historial
+    - Crear `src/actions/history.ts` con funciones `getHistory(userId)` y `getGeneration(id, userId)`
+    - `getHistory`: consulta `generations` ordenado por `created_at desc`, retorna array de `Generacion`
+    - `getGeneration`: consulta por id verificando que `user_id` coincide con el usuario autenticado
+    - _Requisitos: 5.2, 5.3, 5.5_
+  - [x] 11.2 Implementar componentes de historial
+    - Crear `src/components/history/HistoryItem.tsx`: muestra nombre del negocio, nicho (con emoji), fecha formateada y preview del post de Instagram; al hacer click expande los 6 elementos completos
+    - Crear `src/components/history/HistoryList.tsx`: lista de `HistoryItem`; si `generations.length === 0` muestra `EmptyState` con enlace al formulario
+    - _Requisitos: 5.4, 5.5, 5.6_
+  - [x] 11.3 Crear página de historial como RSC
+    - Crear `src/app/(dashboard)/history/page.tsx` como Server Component
+    - Obtener sesión del usuario con cliente Supabase server
+    - Llamar a `getHistory` y pasar datos a `HistoryList`
+    - _Requisitos: 5.2, 5.3_
+  - [ ]* 11.4 Escribir unit tests para historial
+    - `HistoryList.test.tsx`: testear estado vacío (EmptyState con link), renderizado de lista con datos mock
+    - `HistoryItem.test.tsx`: testear renderizado de campos requeridos y expansión al hacer click
+    - _Requisitos: 5.4, 5.5, 5.6_
+  - [ ]* 11.5 Escribir property tests — Propiedades 11, 12, 13 y 14
+    - **Propiedad 11: Toda generación exitosa es persistida en Supabase** — Verificar que tras insert exitoso el registro existe al consultar con el mismo `user_id` — Valida: Requisito 5.1
+    - **Propiedad 12: El historial muestra solo las generaciones del usuario autenticado** — Generar pares de usuarios distintos y verificar aislamiento de datos por RLS — Valida: Requisitos 5.2, 7.2
+    - **Propiedad 13: El historial está ordenado por fecha descendente** — Usar fast-check para generar arrays de generaciones con fechas arbitrarias y verificar orden — Valida: Requisito 5.3
+    - **Propiedad 14: Cada entrada del historial muestra los campos requeridos** — Para cualquier `Generacion` válida, verificar que `HistoryItem` renderiza nombre, nicho, fecha y preview del post — Valida: Requisitos 5.4, 5.5
+
+- [x] 12. Seguridad y hardening
+  - [x] 12.1 Verificar exposición de variables de entorno
+    - Crear `src/lib/utils.ts` con función `validateEnvVars()` que verifica en runtime que `GROQ_API_KEY` existe en el servidor
+    - Asegurarse de que ninguna variable sin prefijo `NEXT_PUBLIC_` sea referenciada en archivos de client components
+    - _Requisitos: 7.1_
+  - [x] 12.2 Agregar sanitización de inputs en el Route Handler
+    - Implementar función `sanitizeInput(value: string): string` en `src/lib/utils.ts` que hace trim y strip de tags HTML
+    - Aplicar `sanitizeInput` a todos los campos del formulario antes de pasarlos a `buildPrompt` en el Route Handler
+    - _Requisitos: 7.3_
+  - [ ]* 12.3 Escribir unit test de seguridad — env vars
+    - `env.test.ts`: verificar que `GROQ_API_KEY` no está accesible en el bundle del cliente (no tiene prefijo `NEXT_PUBLIC_`)
+    - _Requisitos: 7.1_
+
+- [x] 13. Checkpoint final — Verificar cobertura completa
+  - Ejecutar todos los tests con `vitest --run` y verificar que pasan
+  - Verificar que las 15 propiedades de corrección tienen su property test correspondiente
+  - Asegurarse de que no hay errores TypeScript; consultar al usuario si hay dudas.
+
+- [x] 14. Deploy en Vercel
+  - [x] 14.1 Configurar proyecto para Vercel
+    - Crear `vercel.json` si se necesitan configuraciones específicas (headers HTTPS, rewrites)
+    - Verificar que `next.config.ts` no expone variables de entorno sensibles al cliente
+    - _Requisitos: 7.1, 7.4_
+  - [x] 14.2 Configurar variables de entorno en Vercel
+    - Documentar en `README.md` las 3 variables de entorno requeridas y cómo configurarlas en el dashboard de Vercel
+    - Verificar que `GROQ_API_KEY` está marcada como "Server-only" en Vercel
+    - _Requisitos: 7.1_
+
+## Notas
+
+- Las tareas marcadas con `*` son opcionales y pueden omitirse para un MVP más rápido
+- Cada tarea referencia requisitos específicos para trazabilidad
+- Los checkpoints en tareas 5, 10 y 13 aseguran validación incremental
+- Las 15 propiedades de corrección del diseño están cubiertas por property tests en tareas 2.4, 3.4, 6.6, 7.3, 8.5, 9.5 y 11.5
+- Los unit tests complementan los property tests con casos específicos y condiciones de error

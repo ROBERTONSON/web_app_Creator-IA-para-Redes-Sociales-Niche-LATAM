@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Creator IA LATAM
 
-## Getting Started
+SaaS web que genera contenido para redes sociales con IA, especializado por nicho para negocios de América Latina.
 
-First, run the development server:
+## Stack
+
+- **Frontend**: Next.js 16, TypeScript, Tailwind CSS, shadcn/ui
+- **Backend**: Supabase (Auth + PostgreSQL)
+- **IA**: Groq API (`llama-3.1-8b-instant`) — 100% gratuito
+- **Deploy**: Vercel
+
+## Variables de Entorno
+
+Crea un archivo `.env.local` con las siguientes variables:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
+GROQ_API_KEY=tu-groq-api-key
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Cómo obtener cada variable
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Supabase**: [supabase.com](https://supabase.com) → Tu proyecto → Settings → API
+- **Groq**: [console.groq.com](https://console.groq.com) → API Keys → Create API Key (gratis, sin tarjeta)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Base de Datos
 
-## Learn More
+Ejecuta el SQL de `SCHEMA.md` en el SQL Editor de tu proyecto Supabase antes de iniciar la app.
 
-To learn more about Next.js, take a look at the following resources:
+## Desarrollo local
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm install
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deploy en Vercel
 
-## Deploy on Vercel
+1. Conecta tu repositorio en [vercel.com](https://vercel.com)
+2. En **Settings → Environment Variables**, agrega las 3 variables:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `GROQ_API_KEY` — marca esta como **Server-only** (sin prefijo NEXT_PUBLIC)
+3. Deploy automático en cada push a `main`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Nichos soportados
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+🦷 Odontólogo · ✂️ Peluquería · 🏠 Inmobiliaria · 💪 Gimnasio · 🔧 Mecánico · 🍽️ Restaurante
