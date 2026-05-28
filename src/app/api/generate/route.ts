@@ -6,16 +6,11 @@ import { generateRequestSchema } from '@/lib/validations/generator'
 import { sanitizeInput } from '@/lib/utils'
 import type { Generacion, Nicho } from '@/types'
 
+// Demo mode: use a fixed demo user ID for all generations
+const DEMO_USER_ID = process.env.DEMO_USER_ID ?? '625c4a3e-9ef1-4985-b54e-78fdc19c20cc'
+
 export async function POST(request: NextRequest) {
-  // 1. Validate session
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 })
-  }
-
-  // 2. Parse and validate body
+  // 1. Parse and validate body
   let body: unknown
   try {
     body = await request.json()
@@ -34,7 +29,7 @@ export async function POST(request: NextRequest) {
   const { nicho: nichoRaw, formulario, nichoPersonalizado } = parsed.data
   const nicho = nichoRaw as Nicho
 
-  // 3. Sanitize inputs
+  // 2. Sanitize inputs
   const sanitizedForm = {
     nombreNegocio: sanitizeInput(formulario.nombreNegocio),
     pais: sanitizeInput(formulario.pais),
@@ -45,7 +40,7 @@ export async function POST(request: NextRequest) {
     ...(nichoPersonalizado ? { nichoPersonalizado: sanitizeInput(nichoPersonalizado) } : {}),
   }
 
-  // 4. Build prompt and call Groq
+  // 3. Build prompt and call Groq
   let contenido
   try {
     const prompt = buildPrompt(nicho, sanitizedForm)
@@ -59,11 +54,12 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // 5. Persist to Supabase
+  // 4. Persist to Supabase using demo user
+  const supabase = await createClient()
   const { data: inserted, error: dbError } = await supabase
     .from('generations')
     .insert({
-      user_id: user.id,
+      user_id: DEMO_USER_ID,
       nicho,
       nombre_negocio: sanitizedForm.nombreNegocio,
       pais: sanitizedForm.pais,
@@ -83,14 +79,13 @@ export async function POST(request: NextRequest) {
     .select()
     .single()
 
-  if (dbError || !inserted) {
-    // Return content even if persistence fails — don't block the user
+  if (dbError) {
     console.error('Error persisting generation:', dbError)
   }
 
   const generation: Generacion = {
     id: inserted?.id ?? crypto.randomUUID(),
-    userId: user.id,
+    userId: DEMO_USER_ID,
     nicho,
     formulario: sanitizedForm,
     contenido,

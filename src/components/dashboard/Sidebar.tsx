@@ -3,9 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { logout } from '@/actions/auth'
-import { Button } from '@/components/ui/button'
-import { Sparkles, History, LayoutDashboard, LogOut, Menu, X } from 'lucide-react'
+import { Sparkles, History, LayoutDashboard, Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -19,7 +17,7 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile toggle button */}
+      {/* Mobile toggle */}
       <button
         className="fixed top-4 left-4 z-50 md:hidden p-2 rounded-md bg-card border border-border text-foreground"
         onClick={() => setMobileOpen(!mobileOpen)}
@@ -28,7 +26,7 @@ export default function Sidebar() {
         {mobileOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
-      {/* Overlay for mobile */}
+      {/* Overlay */}
       {mobileOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/50 md:hidden"
@@ -80,18 +78,12 @@ export default function Sidebar() {
           })}
         </nav>
 
-        {/* Logout */}
-        <div className="px-3 py-4 border-t border-border">
-          <form action={logout}>
-            <Button
-              type="submit"
-              variant="ghost"
-              className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-            >
-              <LogOut size={18} />
-              Cerrar sesión
-            </Button>
-          </form>
+        {/* Demo badge */}
+        <div className="px-4 py-4 border-t border-border">
+          <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 text-center">
+            <p className="text-xs text-primary font-medium">Modo Demo</p>
+            <p className="text-xs text-muted-foreground mt-0.5">MVP — Creator IA LATAM</p>
+          </div>
         </div>
       </aside>
     </>
