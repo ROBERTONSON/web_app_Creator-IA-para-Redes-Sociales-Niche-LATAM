@@ -1,19 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { NICHOS_CONFIG } from '@/types'
 import GenerationResult from '@/components/generation/GenerationResult'
+import { deleteGeneration } from '@/actions/history'
 import type { Generacion } from '@/types'
-import { ChevronDown, ChevronUp, Calendar } from 'lucide-react'
+import { ChevronDown, ChevronUp, Calendar, Trash2 } from 'lucide-react'
 
 interface HistoryItemProps {
   generacion: Generacion
+  onDeleted: (id: string) => void
 }
 
-export default function HistoryItem({ generacion }: HistoryItemProps) {
+export default function HistoryItem({ generacion, onDeleted }: HistoryItemProps) {
   const [expanded, setExpanded] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const { label, emoji } = NICHOS_CONFIG[generacion.nicho]
 
   const formattedDate = new Intl.DateTimeFormat('es-CO', {
@@ -23,6 +28,19 @@ export default function HistoryItem({ generacion }: HistoryItemProps) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(generacion.createdAt))
+
+  function handleDeleteClick(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      setTimeout(() => setConfirmDelete(false), 3000)
+      return
+    }
+    startTransition(async () => {
+      await deleteGeneration(generacion.id)
+      onDeleted(generacion.id)
+    })
+  }
 
   return (
     <Card className="transition-all duration-150">
@@ -48,8 +66,24 @@ export default function HistoryItem({ generacion }: HistoryItemProps) {
               {formattedDate}
             </div>
           </div>
-          <div className="shrink-0 text-muted-foreground mt-0.5">
-            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+
+          <div className="flex items-center gap-1 shrink-0 mt-0.5">
+            {/* Delete button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDeleteClick}
+              disabled={isPending}
+              className={
+                confirmDelete
+                  ? 'h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10'
+                  : 'h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10'
+              }
+            >
+              <Trash2 size={13} />
+              {confirmDelete ? 'Confirmar' : ''}
+            </Button>
+            {expanded ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
           </div>
         </div>
       </CardHeader>

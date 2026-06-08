@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
 import type { Generacion, Nicho } from '@/types'
 
 const DEMO_USER_ID = process.env.DEMO_USER_ID ?? '625c4a3e-9ef1-4985-b54e-78fdc19c20cc'
@@ -57,4 +58,19 @@ export async function getGeneration(id: string): Promise<Generacion | null> {
 
   if (error || !data) return null
   return mapRow(data)
+}
+
+export async function deleteGeneration(id: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('generations')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', DEMO_USER_ID)
+
+  if (error) return { error: 'No se pudo eliminar la generación.' }
+
+  revalidatePath('/history')
+  return {}
 }

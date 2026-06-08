@@ -8,6 +8,7 @@ import GenerationResult from '@/components/generation/GenerationResult'
 import LoadingState from '@/components/generation/LoadingState'
 import type { Nicho, GeneracionContenido } from '@/types'
 import type { GeneratorFormValues } from '@/lib/validations/generator'
+import { NICHOS_CONFIG } from '@/types'
 
 export default function DashboardPage() {
   const [nicho, setNicho] = useState<Nicho | null>(null)
@@ -15,6 +16,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<GeneracionContenido | null>(null)
+  const [lastFormData, setLastFormData] = useState<{ nicho: Nicho; formulario: GeneratorFormValues; nichoPersonalizado?: string } | null>(null)
 
   function handleNichoChange(newNicho: Nicho) {
     setNicho(newNicho)
@@ -44,6 +46,7 @@ export default function DashboardPage() {
       }
 
       setResult(json.generation.contenido)
+      setLastFormData({ nicho, formulario: data, nichoPersonalizado: nichoPersonalizado || undefined })
     } catch {
       setError('Error de conexión. Verifica tu internet e intenta de nuevo.')
     } finally {
@@ -102,7 +105,21 @@ export default function DashboardPage() {
       {isLoading && <LoadingState />}
 
       {/* Results */}
-      {result && !isLoading && <GenerationResult contenido={result} />}
+      {result && !isLoading && (
+        <GenerationResult
+          contenido={result}
+          imagePromptData={lastFormData ? {
+            nombreNegocio: lastFormData.formulario.nombreNegocio,
+            tipoNegocio: lastFormData.nicho === 'otro'
+              ? (lastFormData.nichoPersonalizado ?? 'Negocio local')
+              : NICHOS_CONFIG[lastFormData.nicho].label,
+            ciudad: lastFormData.formulario.ciudad,
+            pais: lastFormData.formulario.pais,
+            promocion: lastFormData.formulario.promocion,
+            tono: lastFormData.formulario.tono,
+          } : undefined}
+        />
+      )}
     </div>
   )
 }

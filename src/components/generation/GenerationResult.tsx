@@ -1,9 +1,20 @@
 import ContentCard from './ContentCard'
+import ImageGenerator from './ImageGenerator'
 import type { GeneracionContenido } from '@/types'
-import { ImagePlay, Hash, BookOpen, MousePointerClick, Video, AlignLeft, CalendarDays, Camera } from 'lucide-react'
+import { ImagePlay, Hash, BookOpen, MousePointerClick, Video, AlignLeft, CalendarDays } from 'lucide-react'
+
+interface ImagePromptData {
+  nombreNegocio: string
+  tipoNegocio: string
+  ciudad: string
+  pais: string
+  promocion: string
+  tono: string
+}
 
 interface GenerationResultProps {
   contenido: GeneracionContenido
+  imagePromptData?: ImagePromptData
 }
 
 const SECTIONS = [
@@ -45,14 +56,9 @@ const EXTRA_SECTIONS = [
     title: 'Estrategia de Publicación',
     icon: <CalendarDays size={13} />,
   },
-  {
-    key: 'sugerenciaFotos' as const,
-    title: 'Sugerencia de Fotos',
-    icon: <Camera size={13} />,
-  },
 ]
 
-export default function GenerationResult({ contenido }: GenerationResultProps) {
+export default function GenerationResult({ contenido, imagePromptData }: GenerationResultProps) {
   return (
     <div className="space-y-6">
       {/* Contenido principal */}
@@ -96,6 +102,12 @@ export default function GenerationResult({ contenido }: GenerationResultProps) {
                   icon={icon}
                 />
               ) : null
+            )}
+            {contenido.sugerenciaFotos && (
+              <ImageGenerator
+                sugerenciaFotos={contenido.sugerenciaFotos}
+                imagePromptData={imagePromptData}
+              />
             )}
           </div>
         </div>

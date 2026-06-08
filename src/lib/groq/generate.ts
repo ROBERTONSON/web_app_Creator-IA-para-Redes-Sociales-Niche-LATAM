@@ -1,6 +1,12 @@
 import { getGroqClient } from './client'
 import type { GeneracionContenido } from '@/types'
 
+// Models in fallback order — 70b gives better quality, 8b is faster backup
+const MODELS = [
+  { id: 'llama-3.3-70b-versatile', maxTokens: 3000 },
+  { id: 'llama-3.1-8b-instant', maxTokens: 2048 },
+]
+
 interface GroqResponseSchema {
   post_instagram: string
   caption: string
@@ -37,41 +43,62 @@ function isValidResponse(data: unknown): data is GroqResponseSchema {
   )
 }
 
+async function tryModel(
+  model: string,
+  maxTokens: number,
+  prompt: string,
+  signal: AbortSignal
+): Promise<GeneracionContenido> {
+  const completion = await getGroqClient().chat.completions.create(
+    {
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
+      temperature: 0.85,
+      max_tokens: maxTokens,
+    },
+    { signal }
+  )
+
+  const text = completion.choices[0]?.message?.content ?? '{}'
+  const parsed = JSON.parse(text) as unknown
+
+  if (!isValidResponse(parsed)) {
+    throw new Error(`Model ${model}: response missing required fields`)
+  }
+
+  return {
+    postInstagram: parsed.post_instagram,
+    caption: parsed.caption,
+    hashtags: parsed.hashtags,
+    historia: parsed.historia,
+    cta: parsed.cta,
+    reel: parsed.reel,
+    estrategia: stringifyValue(parsed.estrategia ?? ''),
+    sugerenciaFotos: stringifyValue(parsed.sugerencia_fotos ?? ''),
+  }
+}
+
 export async function generateContent(prompt: string): Promise<GeneracionContenido> {
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 30_000)
+  const timeoutId = setTimeout(() => controller.abort(), 45_000)
+
+  let lastError = ''
 
   try {
-    const completion = await getGroqClient().chat.completions.create(
-      {
-        model: 'llama-3.1-8b-instant',
-        messages: [{ role: 'user', content: prompt }],
-        response_format: { type: 'json_object' },
-        temperature: 0.8,
-        max_tokens: 1024,
-      },
-      { signal: controller.signal }
-    )
-
-    clearTimeout(timeoutId)
-
-    const text = completion.choices[0]?.message?.content ?? '{}'
-    const parsed = JSON.parse(text) as unknown
-
-    if (!isValidResponse(parsed)) {
-      throw new Error('La respuesta de la IA no contiene todos los campos requeridos')
+    for (const { id, maxTokens } of MODELS) {
+      try {
+        const result = await tryModel(id, maxTokens, prompt, controller.signal)
+        clearTimeout(timeoutId)
+        return result
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') throw err
+        lastError = err instanceof Error ? err.message : String(err)
+        console.warn(`Groq model ${id} failed, trying next:`, lastError)
+        // continue to next model
+      }
     }
-
-    return {
-      postInstagram: parsed.post_instagram,
-      caption: parsed.caption,
-      hashtags: parsed.hashtags,
-      historia: parsed.historia,
-      cta: parsed.cta,
-      reel: parsed.reel,
-      estrategia: stringifyValue(parsed.estrategia ?? ''),
-      sugerenciaFotos: stringifyValue(parsed.sugerencia_fotos ?? ''),
-    }
+    throw new Error(`All models failed. Last error: ${lastError}`)
   } catch (error) {
     clearTimeout(timeoutId)
     if (error instanceof Error && error.name === 'AbortError') {

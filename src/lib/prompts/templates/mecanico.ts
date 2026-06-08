@@ -1,37 +1,28 @@
 import type { FormularioGenerador } from '@/types'
 
 export const mecanico = (form: FormularioGenerador): string => `
-Eres un experto en marketing digital para talleres mecánicos y servicios automotrices en América Latina.
-Tu especialidad es crear contenido que genere confianza, eduque sobre mantenimiento y atraiga clientes.
+Eres un experto en marketing digital para talleres mecánicos y servicios automotrices en América Latina, especializado en generar confianza técnica, educar sobre mantenimiento preventivo y convertir seguidores en clientes recurrentes.
 
-Datos del negocio:
-- Nombre: ${form.nombreNegocio}
-- País: ${form.pais}
-- Ciudad: ${form.ciudad}
-- Promoción/Servicio: ${form.promocion}
+Contexto del negocio:
+- Taller: ${form.nombreNegocio}
+- Ubicación: ${form.ciudad}, ${form.pais}
+- Campaña: ${form.promocion}
 - Tono: ${form.tono}
-- Objetivo: ${form.objetivo}
+- Objetivo principal: ${form.objetivo}
 
-Genera contenido para redes sociales en español latinoamericano, adaptado a ${form.ciudad}, ${form.pais}.
-Usa lenguaje técnico accesible, menciona beneficios de mantenimiento preventivo, genera confianza y urgencia.
+Audiencia objetivo: Dueños de vehículos de 25-55 años en ${form.ciudad} que quieren cuidar su auto sin que los estafen — valoran la transparencia, el conocimiento técnico accesible y el buen precio.
+
+Crea contenido que posicione al taller como el mecánico honesto y experto que todos quieren tener. Rompe el miedo a los talleres con educación y transparencia.
 
 Responde ÚNICAMENTE con un JSON válido con esta estructura exacta (sin markdown, sin texto adicional):
 {
-  "post_instagram": "texto del post con emojis, 150-300 caracteres",
-  "caption": "caption más detallado, 100-200 caracteres",
-  "hashtags": ["hashtag1", "hashtag2"],
-  "historia": "idea para story en 2-3 oraciones",
-  "cta": "llamada a la acción en 1 oración",
-  "reel": "concepto de reel en 2-3 oraciones",
-  "estrategia": "plan de 3-4 pasos sobre cuándo y cómo publicar este contenido durante la semana, incluyendo días y horarios recomendados para LATAM",
-  "sugerencia_fotos": "descripción detallada de 3 tipos de fotos ideales para acompañar este contenido, con indicaciones de iluminación, ángulo y elementos a incluir"
+  "post_instagram": "Post que combine un dato técnico sorprendente o un tip de mantenimiento con la promoción del servicio, genera confianza inmediata, emojis automotrices (🔧🚗⚙️🛠️💡), mención de ${form.ciudad}, 200-280 caracteres",
+  "caption": "Caption educativo con estructura: dato técnico que el dueño del auto no sabe (genera valor), consecuencia de no hacer el mantenimiento (genera urgencia), solución que ofrece el taller (la promoción), prueba de transparencia (precio claro o garantía). 150-220 caracteres",
+  "hashtags": ["12-15 hashtags: mantenimiento automotriz en ${form.pais}, marca de autos más común en ${form.ciudad}, consejos de mecánica en español, hashtags de ahorro en el auto, comunidad automovilística de ${form.ciudad} y ${form.pais}"],
+  "historia": "Guión para Story de credibilidad de 3 pantallas: pantalla 1 (pregunta directa que el dueño de auto se hace: '¿Cuándo fue la última vez que revisaste tus frenos?' — texto impactante sobre fondo oscuro), pantalla 2 (demostración rápida del proceso en el taller o antes/después de una reparación con texto explicativo), pantalla 3 (oferta de la promoción con precio claro y botón de WhatsApp/contacto). Sin trucos, puro valor.",
+  "cta": "CTA transparente para el taller mecánico: 2-3 oraciones que eliminen el miedo a ir al taller, incluyan el precio o beneficio concreto de la promoción, el canal de contacto directo (WhatsApp, llamada) y una garantía de confianza",
+  "reel": "Concepto para Reel educativo-persuasivo de 20-30 segundos: gancho en 3 segundos (muestra algo que el espectador no esperaba ver — un problema mecánico real o antes/después impactante), secuencia de diagnóstico o proceso de reparación con texto explicativo en pantalla (qué es cada cosa, por qué importa), música de fondo tranquila y técnica, cierre con la solución que ofrece la promoción y precio transparente.",
+  "estrategia": "Plan de contenido automotriz para ${form.ciudad}: mejores días para publicar en ${form.pais} (considera días de mayor tráfico cuando los autos se usan más), Stories semanales de 'tip de mantenimiento', Reels de proceso transparente (muestra el trabajo real), estrategia de contenido estacional según el clima de ${form.ciudad}, mejor momento para llegar a dueños de autos activos en Instagram",
+  "sugerencia_fotos": "Imagen de campaña publicitaria para taller automotriz: mecánico experto en primer plano con herramienta en mano y expresión de confianza profesional, espacio negativo en zona superior para texto de la oferta, auto o pieza mecánica en segundo plano con bokeh, iluminación de taller con luz focalizada que crea contraste dramático, colores metálicos y oscuros que transmiten expertise técnico, sensación de transparencia y profesionalismo, estilo fotografía de campaña de marca automotriz, ratio 4:5 para feed de Instagram."
 }
-
-Instrucciones:
-- post_instagram: incluye emojis de autos/herramientas (🔧🚗⚙️🛠️), menciona ${form.ciudad}
-- hashtags: 10-15 hashtags en español, mezcla automotriz general y locales de ${form.pais}, sin el símbolo #
-- historia: puede ser un tip de mantenimiento, antes/después de reparación, o promoción del servicio
-- reel: idea visual como "proceso de cambio de aceite", "diagnóstico en tiempo real", "tips de mantenimiento"
-- estrategia: menciona días específicos (lunes, martes...) y horarios en zona horaria LATAM
-- sugerencia_fotos: sé específico, describe fotos reales del taller que se puedan tomar con celular
 `.trim()

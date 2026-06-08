@@ -1,3 +1,6 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
 import HistoryItem from './HistoryItem'
 import type { Generacion } from '@/types'
@@ -7,7 +10,13 @@ interface HistoryListProps {
   generaciones: Generacion[]
 }
 
-export default function HistoryList({ generaciones }: HistoryListProps) {
+export default function HistoryList({ generaciones: initialGeneraciones }: HistoryListProps) {
+  const [generaciones, setGeneraciones] = useState(initialGeneraciones)
+
+  function handleDeleted(id: string) {
+    setGeneraciones(prev => prev.filter(g => g.id !== id))
+  }
+
   if (generaciones.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
@@ -16,9 +25,7 @@ export default function HistoryList({ generaciones }: HistoryListProps) {
         </div>
         <div className="space-y-1">
           <p className="font-medium">Aún no tienes generaciones</p>
-          <p className="text-sm text-muted-foreground">
-            Genera tu primer contenido para verlo aquí.
-          </p>
+          <p className="text-sm text-muted-foreground">Genera tu primer contenido para verlo aquí.</p>
         </div>
         <Link
           href="/dashboard"
@@ -34,7 +41,7 @@ export default function HistoryList({ generaciones }: HistoryListProps) {
   return (
     <div className="space-y-3">
       {generaciones.map((g) => (
-        <HistoryItem key={g.id} generacion={g} />
+        <HistoryItem key={g.id} generacion={g} onDeleted={handleDeleted} />
       ))}
     </div>
   )
