@@ -3,15 +3,23 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { Sparkles, History, LayoutDashboard, Menu, X } from 'lucide-react'
+import { Sparkles, History, LayoutDashboard, Menu, X, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { logout } from '@/actions/auth'
+import { Button } from '@/components/ui/button'
+import PlanBadge from '@/components/dashboard/PlanBadge'
+import type { UserPlan } from '@/types'
 
 const navItems = [
   { href: '/dashboard', label: 'Generador', icon: LayoutDashboard },
   { href: '/history', label: 'Historial', icon: History },
 ]
 
-export default function Sidebar() {
+interface SidebarProps {
+  userPlan: UserPlan
+}
+
+export default function Sidebar({ userPlan }: SidebarProps) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -78,12 +86,23 @@ export default function Sidebar() {
           })}
         </nav>
 
-        {/* Demo badge */}
+        {/* Plan badge */}
         <div className="px-4 py-4 border-t border-border">
-          <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 text-center">
-            <p className="text-xs text-primary font-medium">Modo Demo</p>
-            <p className="text-xs text-muted-foreground mt-0.5">MVP — Creator IA LATAM</p>
-          </div>
+          <PlanBadge userPlan={userPlan} />
+        </div>
+
+        {/* Logout */}
+        <div className="px-3 pb-4">
+          <form action={logout}>
+            <Button
+              type="submit"
+              variant="ghost"
+              className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            >
+              <LogOut size={18} />
+              Cerrar sesión
+            </Button>
+          </form>
         </div>
       </aside>
     </>

@@ -62,6 +62,13 @@ export interface Generacion {
   createdAt: string;
 }
 
+export interface UserPlan {
+  plan: 'free' | 'premium'
+  generationsUsed: number
+  imagesUsed: number
+  periodStart: string
+}
+
 export interface GenerateRequest {
   nicho: Nicho;
   formulario: FormularioGenerador;

@@ -4,8 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { Generacion, Nicho } from '@/types'
 
-const DEMO_USER_ID = process.env.DEMO_USER_ID ?? '625c4a3e-9ef1-4985-b54e-78fdc19c20cc'
-
 function mapRow(row: Record<string, unknown>): Generacion {
   return {
     id: row.id as string,
@@ -35,11 +33,13 @@ function mapRow(row: Record<string, unknown>): Generacion {
 
 export async function getHistory(): Promise<Generacion[]> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
 
   const { data, error } = await supabase
     .from('generations')
     .select('*')
-    .eq('user_id', DEMO_USER_ID)
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
   if (error || !data) return []
@@ -48,12 +48,14 @@ export async function getHistory(): Promise<Generacion[]> {
 
 export async function getGeneration(id: string): Promise<Generacion | null> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
 
   const { data, error } = await supabase
     .from('generations')
     .select('*')
     .eq('id', id)
-    .eq('user_id', DEMO_USER_ID)
+    .eq('user_id', user.id)
     .single()
 
   if (error || !data) return null
@@ -62,12 +64,14 @@ export async function getGeneration(id: string): Promise<Generacion | null> {
 
 export async function deleteGeneration(id: string): Promise<{ error?: string }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autorizado' }
 
   const { error } = await supabase
     .from('generations')
     .delete()
     .eq('id', id)
-    .eq('user_id', DEMO_USER_ID)
+    .eq('user_id', user.id)
 
   if (error) return { error: 'No se pudo eliminar la generación.' }
 

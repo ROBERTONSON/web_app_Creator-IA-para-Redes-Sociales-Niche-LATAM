@@ -4,13 +4,57 @@ import { generateContent } from '@/lib/groq/generate'
 import { buildPrompt } from '@/lib/prompts'
 import { generateRequestSchema } from '@/lib/validations/generator'
 import { sanitizeInput } from '@/lib/utils'
-import type { Generacion, Nicho } from '@/types'
-
-// Demo mode: use a fixed demo user ID for all generations
-const DEMO_USER_ID = process.env.DEMO_USER_ID ?? '625c4a3e-9ef1-4985-b54e-78fdc19c20cc'
+import { canGenerate, PLAN_LIMITS } from '@/lib/plans'
+import type { Generacion, Nicho, UserPlan } from '@/types'
 
 export async function POST(request: NextRequest) {
-  // 1. Parse and validate body
+  // 1. Validate real session
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 })
+  }
+
+  const userId = user.id
+
+  // 2. Check plan limits
+  let userPlanRow = await supabase
+    .from('user_plans')
+    .select('*')
+    .eq('user_id', userId)
+    .single()
+
+  // Auto-create free plan if not exists
+  if (userPlanRow.error || !userPlanRow.data) {
+    await supabase.from('user_plans').insert({ user_id: userId })
+    userPlanRow = await supabase.from('user_plans').select('*').eq('user_id', userId).single()
+  }
+
+  if (userPlanRow.data) {
+    const planData = userPlanRow.data
+    const userPlan: UserPlan = {
+      plan: planData.plan,
+      generationsUsed: planData.generations_used,
+      imagesUsed: planData.images_used,
+      periodStart: planData.period_start,
+    }
+
+    if (!canGenerate(userPlan)) {
+      const limit = PLAN_LIMITS.free.generationsPerMonth
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Has alcanzado el límite de ${limit} generaciones gratuitas este mes. Actualiza a Premium para generar contenido ilimitado.`,
+          limitReached: true,
+          plan: 'free',
+        },
+        { status: 403 }
+      )
+    }
+  }
+
+  // 2. Parse and validate body
   let body: unknown
   try {
     body = await request.json()
@@ -54,12 +98,11 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // 4. Persist to Supabase using demo user
-  const supabase = await createClient()
+  // 4. Persist to Supabase
   const { data: inserted, error: dbError } = await supabase
     .from('generations')
     .insert({
-      user_id: DEMO_USER_ID,
+      user_id: userId,
       nicho,
       nombre_negocio: sanitizedForm.nombreNegocio,
       pais: sanitizedForm.pais,
@@ -83,9 +126,12 @@ export async function POST(request: NextRequest) {
     console.error('Error persisting generation:', dbError)
   }
 
+  // 5. Increment generation counter for free plan users
+  await supabase.rpc('increment_generations', { p_user_id: userId })
+
   const generation: Generacion = {
     id: inserted?.id ?? crypto.randomUUID(),
-    userId: DEMO_USER_ID,
+    userId: userId,
     nicho,
     formulario: sanitizedForm,
     contenido,

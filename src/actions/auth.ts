@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
 
 export async function login(
   _prevState: { error: string } | undefined,
@@ -48,6 +49,33 @@ export async function register(
   }
 
   redirect('/dashboard')
+}
+
+export async function loginWithGoogle(): Promise<{ error: string } | undefined> {
+  let supabase
+  try {
+    supabase = await createClient()
+  } catch {
+    return { error: 'El servicio no está disponible temporalmente.' }
+  }
+
+  const headersList = await headers()
+  const origin = headersList.get('origin') ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${origin}/auth/callback`,
+    },
+  })
+
+  if (error) {
+    return { error: 'No se pudo iniciar sesión con Google. Intenta de nuevo.' }
+  }
+
+  if (data.url) {
+    redirect(data.url)
+  }
 }
 
 export async function logout(): Promise<void> {

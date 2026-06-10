@@ -1,125 +1,37 @@
-'use client'
+import { createClient } from '@/lib/supabase/server'
+import type { UserPlan } from '@/types'
+import DashboardClient from './DashboardClient'
 
-import { useState } from 'react'
-import NichoSelector from '@/components/dashboard/NichoSelector'
-import GeneratorForm from '@/components/dashboard/GeneratorForm'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import GenerationResult from '@/components/generation/GenerationResult'
-import LoadingState from '@/components/generation/LoadingState'
-import type { Nicho, GeneracionContenido } from '@/types'
-import type { GeneratorFormValues } from '@/lib/validations/generator'
-import { NICHOS_CONFIG } from '@/types'
+export default async function DashboardPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-export default function DashboardPage() {
-  const [nicho, setNicho] = useState<Nicho | null>(null)
-  const [nichoPersonalizado, setNichoPersonalizado] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<GeneracionContenido | null>(null)
-  const [lastFormData, setLastFormData] = useState<{ nicho: Nicho; formulario: GeneratorFormValues; nichoPersonalizado?: string } | null>(null)
-
-  function handleNichoChange(newNicho: Nicho) {
-    setNicho(newNicho)
-    setNichoPersonalizado('')
-    setResult(null)
-    setError(null)
+  let userPlan: UserPlan = {
+    plan: 'free',
+    generationsUsed: 0,
+    imagesUsed: 0,
+    periodStart: new Date().toISOString(),
   }
 
-  async function handleSubmit(data: GeneratorFormValues) {
-    if (!nicho) return
-    setIsLoading(true)
-    setError(null)
-    setResult(null)
+  if (user) {
+    const { data: planData } = await supabase
+      .from('user_plans')
+      .select('plan, generations_used, images_used, period_start')
+      .eq('user_id', user.id)
+      .single()
 
-    try {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nicho, formulario: data, ...(nichoPersonalizado ? { nichoPersonalizado } : {}) }),
-      })
-
-      const json = await res.json()
-
-      if (!res.ok || !json.success) {
-        setError(json.error ?? 'Error al generar contenido. Intenta de nuevo.')
-        return
+    if (planData) {
+      userPlan = {
+        plan: planData.plan,
+        generationsUsed: planData.generations_used,
+        imagesUsed: planData.images_used,
+        periodStart: planData.period_start,
       }
-
-      setResult(json.generation.contenido)
-      setLastFormData({ nicho, formulario: data, nichoPersonalizado: nichoPersonalizado || undefined })
-    } catch {
-      setError('Error de conexión. Verifica tu internet e intenta de nuevo.')
-    } finally {
-      setIsLoading(false)
+    } else {
+      // Row doesn't exist yet — create it, then it starts at 0 which is correct
+      await supabase.from('user_plans').insert({ user_id: user.id }).single()
     }
   }
 
-  return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold">Generador de Contenido</h1>
-        <p className="text-muted-foreground mt-1">
-          Selecciona tu nicho, completa los datos y genera contenido listo para publicar.
-        </p>
-      </div>
-
-      {/* Nicho selector */}
-      <Card>
-        <CardContent className="pt-6">
-          <NichoSelector
-            value={nicho}
-            onChange={handleNichoChange}
-            nichoPersonalizado={nichoPersonalizado}
-            onNichoPersonalizadoChange={setNichoPersonalizado}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Form — only shown after nicho is selected (and nichoPersonalizado filled if 'otro') */}
-      {nicho && (nicho !== 'otro' || nichoPersonalizado.trim().length > 0) && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Datos del negocio</CardTitle>
-            <CardDescription>
-              Completa la información para personalizar el contenido generado.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <GeneratorForm
-              nicho={nicho}
-              onSubmit={handleSubmit}
-              isLoading={isLoading}
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Error state */}
-      {error && (
-        <div className="rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
-
-      {/* Loading state */}
-      {isLoading && <LoadingState />}
-
-      {/* Results */}
-      {result && !isLoading && (
-        <GenerationResult
-          contenido={result}
-          imagePromptData={lastFormData ? {
-            nombreNegocio: lastFormData.formulario.nombreNegocio,
-            tipoNegocio: lastFormData.nicho === 'otro'
-              ? (lastFormData.nichoPersonalizado ?? 'Negocio local')
-              : NICHOS_CONFIG[lastFormData.nicho].label,
-            ciudad: lastFormData.formulario.ciudad,
-            pais: lastFormData.formulario.pais,
-            promocion: lastFormData.formulario.promocion,
-            tono: lastFormData.formulario.tono,
-          } : undefined}
-        />
-      )}
-    </div>
-  )
+  return <DashboardClient userPlan={userPlan} />
 }
