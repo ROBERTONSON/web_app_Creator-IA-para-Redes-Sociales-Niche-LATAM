@@ -19,10 +19,32 @@ function PaymentBanner() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const payment = searchParams.get('payment')
+  const collectionId = searchParams.get('collection_id') ?? searchParams.get('payment_id')
+  const [upgradeStatus, setUpgradeStatus] = useState<'pending' | 'done' | 'error'>('pending')
+
+  useEffect(() => {
+    if (payment !== 'success' || !collectionId) return
+
+    // Call our API to verify and activate premium
+    fetch('/api/payment-success', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paymentId: collectionId }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        setUpgradeStatus(data.upgraded ? 'done' : 'error')
+        if (data.upgraded) {
+          // Reload after short delay so user sees the success message
+          setTimeout(() => window.location.href = '/dashboard', 2500)
+        }
+      })
+      .catch(() => setUpgradeStatus('error'))
+  }, [payment, collectionId])
 
   useEffect(() => {
     if (!payment) return
-    const t = setTimeout(() => router.replace('/dashboard'), 5000)
+    const t = setTimeout(() => router.replace('/dashboard'), 6000)
     return () => clearTimeout(t)
   }, [payment, router])
 
@@ -31,7 +53,11 @@ function PaymentBanner() {
   if (payment === 'success') return (
     <div className="flex items-center gap-3 rounded-lg bg-green-500/10 border border-green-500/30 px-4 py-3 text-sm text-green-500">
       <CheckCircle size={16} className="shrink-0" />
-      ¡Pago exitoso! Tu cuenta ha sido actualizada a Premium. Recarga la página si el sidebar no se actualiza.
+      {upgradeStatus === 'done'
+        ? '¡Pago exitoso! Tu cuenta fue actualizada a Premium. La página se recargará en unos segundos.'
+        : upgradeStatus === 'error'
+        ? '¡Pago recibido! Activando Premium... Si no se actualiza, recarga la página.'
+        : '¡Pago exitoso! Activando tu plan Premium...'}
     </div>
   )
   if (payment === 'failure') return (
