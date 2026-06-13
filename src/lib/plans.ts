@@ -4,7 +4,7 @@ export const PLAN_LIMITS = {
     imagesPerGeneration: 2,
   },
   premium: {
-    generationsPerMonth: Infinity,
+    generationsPerMonth: 90,
     imagesPerGeneration: Infinity,
   },
 } as const
@@ -20,7 +20,6 @@ export interface UserPlan {
 
 export function canGenerate(userPlan: UserPlan): boolean {
   const limit = PLAN_LIMITS[userPlan.plan].generationsPerMonth
-  if (limit === Infinity) return true
   return userPlan.generationsUsed < limit
 }
 
@@ -31,7 +30,6 @@ export function canGenerateImage(userPlan: UserPlan, imagesThisGeneration: numbe
 }
 
 export function getRemainingGenerations(userPlan: UserPlan): number {
-  if (userPlan.plan === 'premium') return Infinity
-  const limit = PLAN_LIMITS.free.generationsPerMonth
+  const limit = PLAN_LIMITS[userPlan.plan].generationsPerMonth
   return Math.max(0, limit - userPlan.generationsUsed)
 }

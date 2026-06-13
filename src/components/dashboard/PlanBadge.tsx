@@ -36,9 +36,23 @@ export default function PlanBadge({ userPlan }: PlanBadgeProps) {
 
   if (isPremium) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30">
-        <Sparkles size={14} className="text-primary" />
-        <span className="text-xs font-medium text-primary">Plan Premium</span>
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30">
+          <Sparkles size={14} className="text-primary" />
+          <span className="text-xs font-medium text-primary">Plan Premium</span>
+        </div>
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>Generaciones este mes</span>
+          <span className="font-medium text-foreground">
+            {remaining}/{PLAN_LIMITS.premium.generationsPerMonth}
+          </span>
+        </div>
+        <div className="h-1.5 rounded-full bg-border overflow-hidden">
+          <div
+            className="h-full rounded-full bg-primary transition-all"
+            style={{ width: `${((PLAN_LIMITS.premium.generationsPerMonth - remaining) / PLAN_LIMITS.premium.generationsPerMonth) * 100}%` }}
+          />
+        </div>
       </div>
     )
   }

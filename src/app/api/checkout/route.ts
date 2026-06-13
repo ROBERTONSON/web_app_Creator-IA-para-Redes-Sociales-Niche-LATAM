@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
           description: 'Generaciones ilimitadas de contenido e imágenes para redes sociales',
           quantity: 1,
           currency_id: 'CLP',
-          unit_price: 9990,
+          unit_price: 5990,
         },
       ],
       back_urls: {
